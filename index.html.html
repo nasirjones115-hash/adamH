@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>工作進度追蹤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --border: rgba(0,0,0,0.1);
+    --border-em: rgba(0,0,0,0.2);
+    --text: #1a1a18;
+    --text-muted: #6b6b67;
+    --text-hint: #aaa9a4;
+    --green: #1D9E75;
+    --green-bg: #EAF3DE;
+    --green-text: #3B6D11;
+    --amber: #EF9F27;
+    --amber-bg: #FAEEDA;
+    --amber-text: #854F0B;
+    --red: #E24B4A;
+    --red-bg: #FCEBEB;
+    --red-text: #A32D2D;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --surface: #252523;
+      --border: rgba(255,255,255,0.08);
+      --border-em: rgba(255,255,255,0.18);
+      --text: #f0eeea;
+      --text-muted: #9a9994;
+      --text-hint: #5a5a56;
+      --green-bg: #0a2a1e;
+      --green-text: #5DCAA5;
+      --amber-bg: #2a1c06;
+      --amber-text: #FAC775;
+      --red-bg: #2a0c0c;
+      --red-text: #F09595;
+    }
+  }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  .page-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 1.5rem; padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .page-date { font-size: 13px; color: var(--text-muted); }
+  .stats-bar {
+    display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap;
+  }
+  .stat {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 7px 14px;
+    font-size: 13px; color: var(--text-muted);
+  }
+  .stat b { font-weight: 500; color: var(--text); }
+  .stat.s-danger { background: var(--red-bg); color: var(--red-text); border-color: transparent; }
+  .stat.s-danger b { color: var(--red-text); }
+  .stat.s-warn { background: var(--amber-bg); color: var(--amber-text); border-color: transparent; }
+  .stat.s-warn b { color: var(--amber-text); }
+
+  .add-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 0.5px solid var(--border-em);
+    border-radius: var(--radius-sm); padding: 8px 16px;
+    font-size: 14px; font-family: inherit; cursor: pointer; color: var(--text);
+    transition: background 0.15s;
+  }
+  .add-btn:hover { background: var(--bg); }
+
+  .add-form {
+    background: var(--surface); border: 0.5px dashed var(--border-em);
+    border-radius: var(--radius); padding: 1.25rem;
+    margin-bottom: 1rem; display: none;
+  }
+  .add-form.show { display: block; }
+  .add-form input[type="text"], .add-form textarea, .add-form input[type="date"] {
+    width: 100%; border: 0.5px solid var(--border-em); border-radius: var(--radius-sm);
+    padding: 8px 10px; font-size: 14px; background: var(--bg);
+    color: var(--text); font-family: inherit; outline: none; margin-bottom: 10px;
+  }
+  .add-form input[type="text"]:focus, .add-form textarea:focus, .add-form input[type="date"]:focus {
+    border-color: var(--green);
+  }
+  .add-form textarea { resize: vertical; min-height: 56px; }
+  .form-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .form-row label { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+  .form-row input[type="date"] { margin-bottom: 0; width: auto; flex: 1; min-width: 150px; }
+  .form-actions { display: flex; gap: 8px; }
+  .btn-ok {
+    background: var(--text); color: var(--bg); border: none;
+    border-radius: var(--radius-sm); padding: 8px 20px; font-size: 14px;
+    font-family: inherit; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-ok:hover { opacity: 0.8; }
+  .btn-cancel {
+    background: none; border: none; padding: 8px 12px; font-size: 14px;
+    color: var(--text-muted); cursor: pointer; font-family: inherit;
+  }
+
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-card {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.25rem;
+    transition: border-color 0.2s, border-width 0.2s;
+  }
+  .task-card.warn { border-color: var(--amber); border-width: 1.5px; }
+  .task-card.overdue { border-color: var(--red); border-width: 1.5px; }
+  .task-top { display: flex; align-items: flex-start; gap: 10px; }
+  .task-name {
+    flex: 1; font-size: 15px; font-weight: 500; border: none;
+    background: transparent; color: var(--text); font-family: inherit;
+    outline: none; padding: 0;
+  }
+  .task-name:focus { background: var(--bg); border-radius: 4px; padding: 2px 6px; }
+  .del-btn {
+    background: none; border: none; cursor: pointer; color: var(--text-hint);
+    font-size: 16px; padding: 2px; line-height: 1;
+  }
+  .del-btn:hover { color: var(--red); }
+  .task-meta { display: flex; align-items: center; gap: 1rem; margin-top: 10px; flex-wrap: wrap; }
+  .progress-wrap { flex: 1; min-width: 160px; }
+  .progress-label {
+    font-size: 12px; color: var(--text-muted); margin-bottom: 4px;
+    display: flex; justify-content: space-between;
+  }
+  .progress-track { height: 5px; background: var(--bg); border-radius: 99px; }
+  .progress-bar { height: 100%; border-radius: 99px; background: var(--green); transition: width 0.2s, background 0.2s; }
+  .progress-bar.warn { background: var(--amber); }
+  .progress-bar.overdue { background: var(--red); }
+  input[type="range"] {
+    width: 100%; margin-top: 6px; accent-color: var(--green);
+    cursor: pointer;
+  }
+  .date-wrap { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .date-wrap label { color: var(--text-muted); white-space: nowrap; }
+  .date-input {
+    border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 4px 8px; font-size: 13px; background: var(--surface);
+    color: var(--text); font-family: inherit; outline: none;
+  }
+  .date-input:focus { border-color: var(--green); }
+  .badge {
+    font-size: 12px; padding: 2px 9px; border-radius: 99px; white-space: nowrap;
+  }
+  .badge.ok { background: var(--green-bg); color: var(--green-text); }
+  .badge.warn { background: var(--amber-bg); color: var(--amber-text); }
+  .badge.overdue { background: var(--red-bg); color: var(--red-text); }
+  .note-wrap { margin-top: 10px; }
+  .note-input {
+    width: 100%; border: 0.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 7px 10px; font-size: 13px; color: var(--text); background: var(--surface);
+    resize: vertical; min-height: 52px; font-family: inherit; outline: none;
+  }
+  .note-input:focus { border-color: var(--green); }
+  .note-input::placeholder { color: var(--text-hint); }
+  .empty {
+    text-align: center; padding: 3rem 1rem;
+    color: var(--text-hint); font-size: 14px;
+    background: var(--surface); border: 0.5px dashed var(--border);
+    border-radius: var(--radius);
+  }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px; }
+  .sync-status { font-size: 12px; padding: 4px 10px; border-radius: 99px; color: var(--text-muted); background: var(--surface); border: 0.5px solid var(--border); }
+  .sync-status.loading { color: var(--amber-text); background: var(--amber-bg); border-color: transparent; }
+  .sync-status.ok { color: var(--green-text); background: var(--green-bg); border-color: transparent; }
+  .sync-status.err { color: var(--red-text); background: var(--red-bg); border-color: transparent; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <div class="page-title">工作進度追蹤</div>
+    <div class="page-date" id="today-date"></div>
+  </div>
+  <div class="stats-bar" id="stats-bar"></div>
+  <div class="toolbar">
+    <span class="sync-status" id="sync-status">連線中…</span>
+    <button class="add-btn" onclick="toggleForm()">
+      <i class="ti ti-plus" aria-hidden="true"></i>新增事項
+    </button>
+  </div>
+  <div class="add-form" id="add-form">
+    <input type="text" id="new-name" placeholder="事項名稱" />
+    <div class="form-row">
+      <label>預完日</label>
+      <input type="date" id="new-date" />
+    </div>
+    <textarea id="new-note" placeholder="備註（可選）"></textarea>
+    <div class="form-actions">
+      <button class="btn-ok" onclick="addTask()">確認新增</button>
+      <button class="btn-cancel" onclick="toggleForm()">取消</button>
+    </div>
+  </div>
+  <div class="task-list" id="task-list"></div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbyp3pzYPbd8hL-EEpYJJo_mtDhsEvgoY40jm4cnwdTgX1h0gaNsnWIwAIRVXnd29JbRKQ/exec';
+
+let tasks = [];
+let nextId = 1;
+let saveTimer = null;
+
+// ── 狀態列 ──────────────────────────────────────────────
+function setStatus(msg, type) {
+  const el = document.getElementById('sync-status');
+  el.textContent = msg;
+  el.className = 'sync-status ' + (type || '');
+}
+
+// ── Google Sheets 讀寫 ───────────────────────────────────
+async function loadFromSheet() {
+  setStatus('讀取中…', 'loading');
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    tasks = data.map(r => ({
+      id: Number(r.id),
+      name: String(r.name || ''),
+      progress: Number(r.progress) || 0,
+      dueDate: String(r.dueDate || ''),
+      note: String(r.note || '')
+    })).filter(t => t.id && t.name);
+    nextId = tasks.reduce((m, t) => Math.max(m, t.id), 0) + 1;
+    setStatus('已同步', 'ok');
+    render();
+  } catch (e) {
+    setStatus('讀取失敗，請檢查網路', 'err');
+    render();
+  }
+}
+
+async function saveToSheet() {
+  setStatus('儲存中…', 'loading');
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(tasks),
+      headers: { 'Content-Type': 'text/plain' }
+    });
+    setStatus('已儲存', 'ok');
+  } catch (e) {
+    setStatus('儲存失敗', 'err');
+  }
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveToSheet(), 800);
+}
+
+// ── 日期工具 ─────────────────────────────────────────────
+function offsetDate(days) {
+  const d = new Date(); d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0,10);
+}
+function getDaysDiff(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dateStr); due.setHours(0,0,0,0);
+  return Math.round((due - today) / 86400000);
+}
+function getStatus(t) {
+  if (t.progress === 100) return 'done';
+  const diff = getDaysDiff(t.dueDate);
+  if (diff === null) return 'ok';
+  if (diff < 0) return 'overdue';
+  if (diff <= 3) return 'warn';
+  return 'ok';
+}
+function getBadgeText(diff, done) {
+  if (done) return '已完成';
+  if (diff === null) return '';
+  if (diff < 0) return `逾期 ${Math.abs(diff)} 天`;
+  if (diff === 0) return '今天到期';
+  if (diff === 1) return '明天到期';
+  return `剩 ${diff} 天`;
+}
+
+// ── 渲染 ─────────────────────────────────────────────────
+function renderStats() {
+  const total = tasks.length;
+  const done = tasks.filter(t => t.progress === 100).length;
+  const overdue = tasks.filter(t => getStatus(t) === 'overdue').length;
+  const warn = tasks.filter(t => getStatus(t) === 'warn').length;
+  const sb = document.getElementById('stats-bar');
+  if (!total) { sb.innerHTML = ''; return; }
+  let html = `<div class="stat">共 <b>${total}</b> 項</div>`;
+  html += `<div class="stat">已完成 <b>${done}</b> 項</div>`;
+  if (overdue) html += `<div class="stat s-danger">逾期 <b>${overdue}</b> 項</div>`;
+  if (warn) html += `<div class="stat s-warn">即將到期 <b>${warn}</b> 項</div>`;
+  sb.innerHTML = html;
+}
+
+function render() {
+  const list = document.getElementById('task-list');
+  if (!tasks.length) {
+    list.innerHTML = '<div class="empty">尚無事項，點擊「新增事項」開始追蹤</div>';
+    renderStats(); return;
+  }
+  list.innerHTML = tasks.map(t => {
+    const status = getStatus(t);
+    const diff = getDaysDiff(t.dueDate);
+    const done = t.progress === 100;
+    const bText = getBadgeText(diff, done);
+    const bClass = done ? 'ok' : (status === 'overdue' ? 'overdue' : status === 'warn' ? 'warn' : diff !== null ? 'ok' : '');
+    const barClass = done ? '' : (status === 'overdue' ? 'overdue' : status === 'warn' ? 'warn' : '');
+    const cardClass = done ? '' : (status === 'overdue' ? 'overdue' : status === 'warn' ? 'warn' : '');
+    return `
+    <div class="task-card ${cardClass}" id="card-${t.id}">
+      <div class="task-top">
+        <input class="task-name" value="${escHtml(t.name)}" onchange="updateName(${t.id},this.value)" />
+        <button class="del-btn" onclick="deleteTask(${t.id})" aria-label="刪除"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      </div>
+      <div class="task-meta">
+        <div class="progress-wrap">
+          <div class="progress-label"><span>進度</span><span>${t.progress}%</span></div>
+          <div class="progress-track">
+            <div class="progress-bar ${barClass}" style="width:${t.progress}%"></div>
+          </div>
+          <input type="range" min="0" max="100" step="5" value="${t.progress}" oninput="updateProgress(${t.id},this.value)" />
+        </div>
+        <div class="date-wrap">
+          <label>預完日</label>
+          <input class="date-input" type="date" value="${t.dueDate||''}" onchange="updateDate(${t.id},this.value)" />
+          ${bText ? `<span class="badge ${bClass}">${bText}</span>` : ''}
+        </div>
+      </div>
+      <div class="note-wrap">
+        <textarea class="note-input" placeholder="備註..." onchange="updateNote(${t.id},this.value)">${escHtml(t.note||'')}</textarea>
+      </div>
+    </div>`;
+  }).join('');
+  renderStats();
+}
+
+// ── 操作 ─────────────────────────────────────────────────
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function updateName(id,v){ tasks=tasks.map(t=>t.id===id?{...t,name:v}:t); renderStats(); scheduleSave(); }
+function updateProgress(id,v){ tasks=tasks.map(t=>t.id===id?{...t,progress:parseInt(v)}:t); render(); scheduleSave(); }
+function updateDate(id,v){ tasks=tasks.map(t=>t.id===id?{...t,dueDate:v}:t); render(); scheduleSave(); }
+function updateNote(id,v){ tasks=tasks.map(t=>t.id===id?{...t,note:v}:t); scheduleSave(); }
+function deleteTask(id){ if(confirm('確定刪除這個事項？')){ tasks=tasks.filter(t=>t.id!==id); render(); saveToSheet(); } }
+
+function toggleForm(){
+  const f=document.getElementById('add-form');
+  f.classList.toggle('show');
+  if(f.classList.contains('show')) document.getElementById('new-name').focus();
+}
+function addTask(){
+  const name=document.getElementById('new-name').value.trim();
+  if(!name){ document.getElementById('new-name').focus(); return; }
+  const dueDate=document.getElementById('new-date').value;
+  const note=document.getElementById('new-note').value.trim();
+  tasks.push({id:nextId++,name,progress:0,dueDate,note});
+  document.getElementById('new-name').value='';
+  document.getElementById('new-date').value='';
+  document.getElementById('new-note').value='';
+  document.getElementById('add-form').classList.remove('show');
+  render(); saveToSheet();
+}
+
+// ── 初始化 ───────────────────────────────────────────────
+const today = new Date();
+document.getElementById('today-date').textContent =
+  `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+
+loadFromSheet();
+</script>
+</body>
+</html>

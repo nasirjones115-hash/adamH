@@ -250,11 +250,8 @@ async function loadFromSheet() {
 async function saveToSheet() {
   setStatus('儲存中…', 'loading');
   try {
-    await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify(tasks),
-      headers: { 'Content-Type': 'text/plain' }
-    });
+    const encoded = encodeURIComponent(JSON.stringify(tasks));
+    await fetch(`${API_URL}?action=save&data=${encoded}`);
     setStatus('已儲存', 'ok');
   } catch (e) {
     setStatus('儲存失敗', 'err');
